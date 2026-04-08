@@ -15,9 +15,23 @@ export default function LoginPage() {
     if (!email || !password) { setError('Please enter email and password'); return }
     setLoading(true); setError('')
     try {
-      const res = await HospitalAPI.login(email, password)
-      saveAuth(res.data.token, res.data.hospital)
-      router.push('/dashboard')
+      const role = localStorage.getItem('cb_selected_role') || 'hospital'
+      const loginMap: Record<string, () => Promise<any>> = {
+        hospital:       () => HospitalAPI.login(email, password),
+        corporate:      () => HospitalAPI.loginAs('corporate', email, password),
+        clinic:         () => HospitalAPI.loginAs('clinic', email, password),
+        pharmaceutical: () => HospitalAPI.loginAs('pharmaceutical', email, password),
+      }
+      const res = await (loginMap[role] ?? loginMap.hospital)()
+      const userData = res.data.hospital ?? res.data.corporate ?? res.data.clinic ?? res.data.pharma ?? {}
+      saveAuth(res.data.token, { ...userData, role })
+      const redirectMap: Record<string, string> = {
+        hospital:       '/dashboard',
+        corporate:      '/corporate/dashboard',
+        clinic:         '/clinic/dashboard',
+        pharmaceutical: '/pharmaceutical/dashboard',
+      }
+      router.push(redirectMap[role] ?? '/dashboard')
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Invalid email or password')
     } finally {

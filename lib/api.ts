@@ -1,52 +1,48 @@
-import axios from 'axios';
+import axios from 'axios'
+import { getToken } from './auth'
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || 'https://carebridge-backend-dns0.onrender.com';
+const BASE_URL = 'https://carebridge-backend-dns0.onrender.com'
 
-export const api = axios.create({
-  baseURL: BASE,
-  timeout: 15000,
-  headers: { 'Content-Type': 'application/json' },
-});
+const api = axios.create({
+  baseURL: BASE_URL,
+})
 
-api.interceptors.request.use((cfg) => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('cb_hospital_token');
-    if (token) cfg.headers.Authorization = `Bearer ${token}`;
+// Attach token to every request automatically
+api.interceptors.request.use((config) => {
+  const token = getToken()
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
   }
-  return cfg;
-});
+  return config
+})
 
+// Auto logout on 401
 api.interceptors.response.use(
-  (r) => r,
-  (err) => {
-    if (err.response?.status === 401 && typeof window !== 'undefined') {
-      localStorage.removeItem('cb_hospital_token');
-      localStorage.removeItem('cb_hospital');
-      window.location.href = '/login';
+  (response) => response,
+  (error) => {
+    if (error?.response?.status === 401) {
+      localStorage.removeItem('cb_hospital_token')
+      localStorage.removeItem('cb_hospital')
+      window.location.href = '/select-role'
     }
-    return Promise.reject(err);
+    return Promise.reject(error)
   }
-);
+)
 
 export const HospitalAPI = {
   login: (email: string, password: string) =>
     api.post('/api/hospital/login', { email, password }),
 
-  getMe: () =>
-    api.get('/api/hospital/me'),
+  loginAs: (role: string, email: string, password: string) =>
+    api.post(`/api/${role}/login`, { email, password }),
 
-  getDashboard: () =>
-    api.get('/api/hospital/dashboard'),
+  getDashboard: () => api.get('/api/hospital/dashboard'),
+  getBookings: () => api.get('/api/hospital/bookings'),
+  getAnalytics: (period: string) => api.get(`/api/hospital/analytics?period=${period}`),
+  getAds: () => api.get('/api/hospital/ads'),
+  postAd: (data: object) => api.post('/api/hospital/ads', data),
+  getProfile: () => api.get('/api/hospital/me'),
+  updateProfile: (data: object) => api.put('/api/hospital/profile', data),
+}
 
-  getBookings: () =>
-    api.get('/api/hospital/bookings'),
-
-  getAds: () =>
-    api.get('/api/hospital/ads'),
-
-  postAd: (data: Record<string, unknown>) =>
-    api.post('/api/hospital/ads', data),
-
-  updateProfile: (data: Record<string, unknown>) =>
-    api.put('/api/hospital/profile', data),
-};
+export default api

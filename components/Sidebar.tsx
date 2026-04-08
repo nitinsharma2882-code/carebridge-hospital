@@ -1,96 +1,90 @@
-'use client'
-import { useRouter, usePathname } from 'next/navigation'
-import { clearAuth, getHospital } from '@/lib/auth'
+'use client';
 
-const NAV = [
-  { label: 'Dashboard',  href: '/dashboard',  icon: 'D' },
-  { label: 'Bookings',   href: '/bookings',   icon: 'B' },
-  { label: 'Post an Ad', href: '/ads',         icon: 'A' },
-  { label: 'Analytics',  href: '/analytics',  icon: 'N' },
-  { label: 'Profile',    href: '/profile',    icon: 'P' },
-]
+// components/Sidebar.tsx — UPDATED (role-aware, backward compatible)
+// Replaces your existing Sidebar.tsx.
+// Hospital users see exactly the same nav as before.
+// Other roles see their own nav from navConfig.ts.
+
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { getHospital, clearAuth, getRole } from '@/lib/auth';
+import { navByRole, roleMeta } from '@/lib/navConfig';
 
 export default function Sidebar() {
-  const router   = useRouter()
-  const pathname = usePathname()
-  const hospital = getHospital()
-
-  const initials = hospital?.name
-    ? hospital.name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
-    : 'H'
+  const pathname = usePathname();
+  const router = useRouter();
+  const role = getRole();
+  const hospital = getHospital();
+  const nav = navByRole[role];
+  const meta = roleMeta[role];
 
   const handleLogout = () => {
-    clearAuth()
-    router.push('/login')
-  }
+    clearAuth();
+    router.push('/select-role');
+  };
 
   return (
-    <aside style={{
-      width: 220, background: '#0F172A', display: 'flex', flexDirection: 'column',
-      height: '100vh', position: 'fixed', left: 0, top: 0, zIndex: 50,
-    }}>
-      {/* Logo */}
-      <div style={{ padding: '24px 20px 18px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-        <div style={{ fontSize: 17, fontWeight: 900, color: '#fff', letterSpacing: '-0.4px' }}>
-          CareBridge
+    <aside className="w-64 min-h-screen bg-gray-900 border-r border-gray-800 flex flex-col">
+      {/* Logo + Role Badge */}
+      <div className="p-6 border-b border-gray-800">
+        <div className="flex items-center gap-3 mb-3">
+          <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${meta.color} flex items-center justify-center text-white font-bold text-sm`}>
+            C
+          </div>
+          <span className="text-white font-bold text-lg">CareBridge</span>
         </div>
-        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 600, marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-          Hospital Portal
+        <span className={`text-xs px-2 py-0.5 rounded-full bg-gradient-to-r ${meta.color} text-white font-medium`}>
+          {meta.label} Panel
+        </span>
+      </div>
+
+      {/* User Info */}
+      <div className="px-4 py-3 border-b border-gray-800">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white text-sm font-semibold">
+            {(hospital?.name as string)?.[0] ?? 'U'}
+          </div>
+          <div className="min-w-0">
+            <div className="text-white text-sm font-medium truncate">
+              {(hospital?.name as string) ?? 'User'}
+            </div>
+            <div className="text-gray-400 text-xs truncate">
+              {(hospital?.email as string) ?? ''}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Nav */}
-      <nav style={{ flex: 1, padding: '14px 10px', overflowY: 'auto' }}>
-        {NAV.map(item => {
-          const active = pathname === item.href
+      {/* Navigation */}
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        {nav.map((item) => {
+          const active = pathname === item.href || pathname.startsWith(item.href + '/');
           return (
-            <div key={item.href}
-              onClick={() => router.push(item.href)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
-                marginBottom: 2, transition: 'all 0.15s',
-                background: active ? 'rgba(13,148,136,0.2)' : 'transparent',
-                color: active ? '#4ECDC4' : 'rgba(255,255,255,0.5)',
-                fontSize: 13, fontWeight: active ? 700 : 500,
-              }}>
-              <div style={{
-                width: 7, height: 7, borderRadius: '50%',
-                background: active ? '#0D9488' : 'rgba(255,255,255,0.3)',
-                flexShrink: 0,
-              }} />
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                active
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
+              }`}
+            >
+              <span className="text-base">{item.icon}</span>
               {item.label}
-            </div>
-          )
+            </Link>
+          );
         })}
       </nav>
 
-      {/* Hospital info + logout */}
-      <div style={{ padding: '12px 10px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', marginBottom: 4 }}>
-          <div style={{
-            width: 34, height: 34, borderRadius: 10,
-            background: 'linear-gradient(135deg,#0D9488,#065f52)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 12, fontWeight: 800, color: '#fff', flexShrink: 0,
-          }}>
-            {initials}
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.85)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {hospital?.name || 'Hospital'}
-            </div>
-            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>
-              {hospital?.city || 'Partner'}
-            </div>
-          </div>
-        </div>
-        <div onClick={handleLogout}
-          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 10, cursor: 'pointer', color: 'rgba(255,255,255,0.35)', fontSize: 12, fontWeight: 500 }}>
-          <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'rgba(220,38,38,0.5)', flexShrink: 0 }} />
-          Sign Out
-        </div>
+      {/* Logout */}
+      <div className="p-4 border-t border-gray-800">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all"
+        >
+          <span>🚪</span> Logout
+        </button>
       </div>
     </aside>
-  )
+  );
 }

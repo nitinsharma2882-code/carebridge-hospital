@@ -1,25 +1,36 @@
-'use client'
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { isLoggedIn } from '@/lib/auth'
+'use client';
 
-export default function AuthGuard({ children }: { children: React.ReactNode }) {
-  const router = useRouter()
-  const [ready, setReady] = useState(false)
+// components/AuthGuard.tsx — EXTENDED VERSION
+// Drop-in replacement for your existing AuthGuard.
+// New prop `requiredRole` restricts access to specific roles.
+// If omitted, it behaves exactly like the old AuthGuard (any logged-in user passes).
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { isLoggedIn, getRole, getDashboardPath, UserRole } from '@/lib/auth';
+
+interface AuthGuardProps {
+  children: React.ReactNode;
+  requiredRole?: UserRole; // new optional prop
+}
+
+export default function AuthGuard({ children, requiredRole }: AuthGuardProps) {
+  const router = useRouter();
 
   useEffect(() => {
     if (!isLoggedIn()) {
-      router.replace('/login')
-    } else {
-      setReady(true)
+      router.replace('/select-role');
+      return;
     }
-  }, [])
 
-  if (!ready) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#F8FAFC' }}>
-      <div style={{ fontSize: 14, color: '#64748B' }}>Loading...</div>
-    </div>
-  )
+    if (requiredRole && getRole() !== requiredRole) {
+      // Logged in but wrong role — redirect to their own dashboard
+      router.replace(getDashboardPath());
+    }
+  }, [router, requiredRole]);
 
-  return <>{children}</>
+  if (!isLoggedIn()) return null;
+  if (requiredRole && getRole() !== requiredRole) return null;
+
+  return <>{children}</>;
 }
