@@ -62,7 +62,7 @@ export default function AdsPage() {
   const handleSubmit = async () => {
     setSubmitting(true)
     try {
-      await HospitalAPI.postAd(form)
+      await HospitalAPI.postAd(form as unknown as Record<string, unknown>)
       const res = await HospitalAPI.getAds()
       if (res.data?.success) setAds(res.data.ads || [])
       setStep('done')
