@@ -16,7 +16,7 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Auto logout on 401 — only for non-login requests
+// Auto logout on 401 — skip login requests
 api.interceptors.response.use(
   (response) => response,
   (error) => {
