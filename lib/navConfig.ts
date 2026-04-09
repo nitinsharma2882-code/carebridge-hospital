@@ -1,7 +1,4 @@
-// lib/navConfig.ts
-// Centralised nav config for all roles.
-// Sidebar.tsx should import and use this instead of hardcoded links.
-
+// lib/navConfig.ts — UPDATED with Communications page
 import { UserRole } from './auth';
 
 export interface NavItem {
@@ -19,15 +16,16 @@ const hospitalNav: NavItem[] = [
 ];
 
 const corporateNav: NavItem[] = [
-  { label: 'Dashboard',       href: '/corporate/dashboard',      icon: '📊' },
-  { label: 'Employees',       href: '/corporate/employees',      icon: '👥' },
-  { label: 'Bookings',        href: '/corporate/bookings',       icon: '📋' },
-  { label: 'Health Events',   href: '/corporate/events',         icon: '🏕️' },
-  { label: 'Billing',         href: '/corporate/billing',        icon: '💳' },
-  { label: 'Analytics',       href: '/corporate/analytics',      icon: '📈' },
-  { label: 'Notifications',   href: '/corporate/notifications',  icon: '🔔' },
-  { label: 'Support',         href: '/corporate/support',        icon: '🎧' },
-  { label: 'Profile',         href: '/corporate/profile',        icon: '👤' },
+  { label: 'Dashboard',       href: '/corporate/dashboard',       icon: '📊' },
+  { label: 'Employees',       href: '/corporate/employees',       icon: '👥' },
+  { label: 'Bookings',        href: '/corporate/bookings',        icon: '📋' },
+  { label: 'Health Events',   href: '/corporate/events',          icon: '🏕️' },
+  { label: 'Communications',  href: '/corporate/communications',  icon: '✉️' },
+  { label: 'Billing',         href: '/corporate/billing',         icon: '💳' },
+  { label: 'Analytics',       href: '/corporate/analytics',       icon: '📈' },
+  { label: 'Notifications',   href: '/corporate/notifications',   icon: '🔔' },
+  { label: 'Support',         href: '/corporate/support',         icon: '🎧' },
+  { label: 'Profile',         href: '/corporate/profile',         icon: '👤' },
 ];
 
 const clinicNav: NavItem[] = [
