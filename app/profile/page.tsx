@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import Sidebar from '@/components/Sidebar'
 import TopBar from '@/components/TopBar'
 import AuthGuard from '@/components/AuthGuard'
-import { HospitalAPI } from '@/lib/api'
+import api from '@/lib/api'
 import { getHospital, saveAuth, getToken } from '@/lib/auth'
 
 export default function ProfilePage() {
@@ -17,45 +17,62 @@ export default function ProfilePage() {
   const [saving,       setSaving]       = useState(false)
   const [saved,        setSaved]        = useState(false)
   const [error,        setError]        = useState('')
+  const [loadError,    setLoadError]    = useState('')
 
   useEffect(() => {
-    const h = getHospital()
+    // 1. Load from localStorage immediately so form isn't blank
+    const h = getHospital() as Record<string, unknown> | null
     if (h) {
-      setName(h.name || '')
-      setEmail(h.email || '')
-      setPhone(h.phone || '')
-      setCity(h.city || '')
-      setAddress(h.address || '')
-      setWebsite(h.website || '')
-      setSpecialities((h.specialities || []).join(', '))
+      setName((h.name as string) || '')
+      setEmail((h.email as string) || '')
+      setPhone((h.phone as string) || '')
+      setCity((h.city as string) || '')
+      setAddress((h.address as string) || '')
+      setWebsite((h.website as string) || '')
+      setSpecialities(((h.specialities as string[]) || []).join(', '))
     }
-    HospitalAPI.getMe().then(res => {
-      if (res.data?.success) {
-        const h = res.data.hospital
-        setName(h.name || ''); setEmail(h.email || '')
-        setPhone(h.phone || ''); setCity(h.city || '')
-        setAddress(h.address || ''); setWebsite(h.website || '')
-        setSpecialities((h.specialities || []).join(', '))
-      }
-    }).catch(() => {})
+
+    // 2. Fetch fresh data from API — works with both old ({success, hospital}) and new response formats
+    api.get('/api/hospital/me')
+      .then(res => {
+        const data = res.data
+        // Support both response formats: { success, hospital } or direct hospital object
+        const h = data?.hospital ?? data
+        if (h && (h.name || h.email)) {
+          setName(h.name || '')
+          setEmail(h.email || '')
+          setPhone(h.phone || '')
+          setCity(h.city || '')
+          setAddress(h.address || '')
+          setWebsite(h.website || '')
+          setSpecialities((h.specialities || []).join(', '))
+        }
+      })
+      .catch(() => {
+        setLoadError('Could not refresh profile from server. Showing cached data.')
+      })
   }, [])
 
   const handleSave = async () => {
     if (!name.trim()) { setError('Hospital name is required'); return }
     setSaving(true); setError(''); setSaved(false)
     try {
-      const res = await HospitalAPI.updateProfile({
+      const res = await api.put('/api/hospital/profile', {
         name, phone, city, address, website,
-        specialities: specialities.split(',').map(s => s.trim()).filter(Boolean),
+        specialities: specialities.split(',').map((s: string) => s.trim()).filter(Boolean),
       })
-      if (res.data?.success) {
+      const data = res.data
+      // Support both response formats
+      const updated = data?.hospital ?? data
+      if (updated) {
         const token = getToken() || ''
-        saveAuth(token, res.data.hospital)
-        setSaved(true)
-        setTimeout(() => setSaved(false), 3000)
+        saveAuth(token, { ...updated, role: 'hospital' })
       }
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to save. Please try again.')
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } }
+      setError(e?.response?.data?.message || 'Failed to save. Please try again.')
     } finally { setSaving(false) }
   }
 
@@ -69,10 +86,12 @@ export default function ProfilePage() {
     marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px',
   }
 
-  const hospital = getHospital()
-  const initials = hospital?.name
-    ? hospital.name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
-    : 'H'
+  const hospital = getHospital() as Record<string, unknown> | null
+  const initials = name
+    ? name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
+    : hospital?.name
+      ? (hospital.name as string).split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
+      : 'H'
 
   return (
     <AuthGuard>
@@ -83,6 +102,13 @@ export default function ProfilePage() {
 
           <div style={{ flex: 1, padding: 24, overflowY: 'auto' }}>
             <div style={{ maxWidth: 720, margin: '0 auto' }}>
+
+              {/* Load warning (non-critical) */}
+              {loadError && (
+                <div style={{ background: '#FEF3C7', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#92400E', fontWeight: 600 }}>
+                  ⚠️ {loadError}
+                </div>
+              )}
 
               {/* Avatar */}
               <div style={{ background: '#fff', borderRadius: 16, padding: 24, border: '1px solid #E2E8F0', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 20 }}>
@@ -102,7 +128,7 @@ export default function ProfilePage() {
 
                 {saved && (
                   <div style={{ background: '#DCFCE7', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#14532D', fontWeight: 600 }}>
-                    Profile saved successfully!
+                    ✅ Profile saved successfully!
                   </div>
                 )}
                 {error && (
@@ -142,11 +168,15 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                <button onClick={handleSave} disabled={saving}
-                  style={{ padding: '12px 28px', background: saving ? '#94A3B8' : '#0D9488', color: '#fff', border: 'none', borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  style={{ padding: '12px 28px', background: saving ? '#94A3B8' : '#0D9488', color: '#fff', border: 'none', borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif' }}
+                >
                   {saving ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
+
             </div>
           </div>
         </div>

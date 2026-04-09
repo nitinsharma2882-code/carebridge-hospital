@@ -1,4 +1,4 @@
-// lib/navConfig.ts — UPDATED with Communications page
+// lib/navConfig.ts — Updated hospital nav with Support
 import { UserRole } from './auth';
 
 export interface NavItem {
@@ -12,6 +12,7 @@ const hospitalNav: NavItem[] = [
   { label: 'Bookings',     href: '/bookings',   icon: '📋' },
   { label: 'Analytics',    href: '/analytics',  icon: '📈' },
   { label: 'Post an Ad',   href: '/ads',        icon: '📢' },
+  { label: 'Support',      href: '/support',    icon: '🎧' },
   { label: 'Profile',      href: '/profile',    icon: '👤' },
 ];
 

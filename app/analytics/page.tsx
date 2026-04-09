@@ -34,20 +34,100 @@ function downloadPDF(title: string, lines: string[]) {
   URL.revokeObjectURL(url)
 }
 
+const StatCard = ({ label, value, sub, color, bg }: { label: string; value: string | number; sub: string; color: string; bg: string }) => (
+  <div style={{ background: '#fff', borderRadius: 14, padding: 18, border: '1px solid #E2E8F0' }}>
+    <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>{label}</div>
+    <div style={{ fontSize: 28, fontWeight: 900, color: '#0F172A', letterSpacing: '-0.5px' }}>{value}</div>
+    <div style={{ fontSize: 12, color, fontWeight: 600, marginTop: 4, background: bg, display: 'inline-block', padding: '2px 8px', borderRadius: 20 }}>{sub}</div>
+  </div>
+)
+
+// Donut chart using SVG
+function DonutChart({ segments, size = 120 }: { segments: { value: number; color: string; label: string }[]; size?: number }) {
+  const total = segments.reduce((s, x) => s + x.value, 0) || 1
+  const r = 40; const cx = size / 2; const cy = size / 2
+  let offset = 0
+  const circumference = 2 * Math.PI * r
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#F1F5F9" strokeWidth={16} />
+        {segments.map((seg, i) => {
+          const pct = seg.value / total
+          const dash = pct * circumference
+          const gap = circumference - dash
+          const rotation = offset * 360 - 90
+          offset += pct
+          return (
+            <circle key={i} cx={cx} cy={cy} r={r} fill="none"
+              stroke={seg.color} strokeWidth={16}
+              strokeDasharray={`${dash} ${gap}`}
+              strokeLinecap="round"
+              transform={`rotate(${rotation} ${cx} ${cy})`}
+              style={{ transition: 'stroke-dasharray 0.5s ease' }}
+            />
+          )
+        })}
+        <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle" fontSize="16" fontWeight="900" fill="#0F172A">{total}</text>
+        <text x={cx} y={cy + 14} textAnchor="middle" fontSize="8" fill="#94A3B8">total</text>
+      </svg>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {segments.map((seg, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 10, height: 10, borderRadius: 3, background: seg.color, flexShrink: 0 }} />
+            <span style={{ fontSize: 12, color: '#475569' }}>{seg.label}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#0F172A', marginLeft: 'auto' }}>{seg.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Line chart using SVG
+function LineChart({ data, color = '#0D9488', height = 80 }: { data: number[]; color?: string; height?: number }) {
+  if (data.length < 2) return null
+  const max = Math.max(...data, 1)
+  const w = 300; const h = height
+  const points = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * w
+    const y = h - (v / max) * (h - 10) - 5
+    return `${x},${y}`
+  }).join(' ')
+
+  return (
+    <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
+      {/* Area fill */}
+      <defs>
+        <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.2" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <polygon points={`0,${h} ${points} ${w},${h}`} fill="url(#lineGrad)" />
+      <polyline points={points} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+      {data.map((v, i) => {
+        const x = (i / (data.length - 1)) * w
+        const y = h - (v / max) * (h - 10) - 5
+        return <circle key={i} cx={x} cy={y} r="4" fill={color} stroke="#fff" strokeWidth="2" />
+      })}
+    </svg>
+  )
+}
+
 export default function AnalyticsPage() {
-  const [stats,    setStats]    = useState<Stats | null>(null)
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading,  setLoading]  = useState(true)
   const [period,   setPeriod]   = useState<'7d' | '30d' | '90d' | 'all'>('30d')
 
   useEffect(() => {
     Promise.all([HospitalAPI.getDashboard(), HospitalAPI.getBookings()]).then(([d, b]) => {
-      if (d.data?.success) setStats(d.data.stats)
-      if (b.data?.success) setBookings(b.data.bookings || [])
+      const bData = b.data?.bookings || b.data?.data || []
+      setBookings(bData)
     }).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
-  // Filter by period
   const now = new Date()
   const days = period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 9999
   const filtered = bookings.filter(b => {
@@ -55,12 +135,11 @@ export default function AnalyticsPage() {
     return diff <= days
   })
 
-  // Analytics from ads (serviceType filter)
   const fromAds  = filtered.filter(b => b.serviceType === 'general')
   const fromAsst = filtered.filter(b => ['opd_assistant', 'nursing'].includes(b.serviceType))
   const fromAmbu = filtered.filter(b => b.serviceType === 'ambulance')
 
-  // Monthly trend
+  // Monthly trend — last 6 months
   const months: Record<string, number> = {}
   filtered.forEach(b => {
     const m = new Date(b.createdAt).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })
@@ -68,6 +147,23 @@ export default function AnalyticsPage() {
   })
   const monthData = Object.entries(months).slice(-6)
   const maxMonth  = Math.max(...monthData.map(([,v]) => v), 1)
+
+  // Weekly trend — last 7 days for line chart
+  const weekData = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - (6 - i))
+    return filtered.filter(b => {
+      const bd = new Date(b.createdAt)
+      return bd.toDateString() === d.toDateString()
+    }).length
+  })
+
+  // Status breakdown for donut
+  const statusSegments = [
+    { label: 'Completed',   value: filtered.filter(b => b.status === 'completed').length,   color: '#16A34A' },
+    { label: 'In Progress', value: filtered.filter(b => b.status === 'in_progress').length, color: '#0D9488' },
+    { label: 'Pending',     value: filtered.filter(b => b.status === 'pending').length,     color: '#D97706' },
+    { label: 'Cancelled',   value: filtered.filter(b => b.status === 'cancelled').length,   color: '#DC2626' },
+  ].filter(s => s.value > 0)
 
   // Service breakdown
   const svcBreakdown = [
@@ -79,60 +175,23 @@ export default function AnalyticsPage() {
   const totalSvc = svcBreakdown.reduce((s, x) => s + x.count, 0) || 1
 
   const handleDownloadAdAnalyticsCSV = () => {
-    const data = fromAds.map(b => ({
-      BookingID: b._id.slice(-8).toUpperCase(),
-      Service: b.serviceType, Status: b.status,
-      Fare: b.fare, Date: new Date(b.createdAt).toLocaleDateString('en-IN'),
-      Patient: b.userId?.name || 'N/A',
-    }))
-    downloadCSV(data, `ad-traffic-analytics-${Date.now()}.csv`)
+    downloadCSV(fromAds.map(b => ({ BookingID: b._id.slice(-8).toUpperCase(), Service: b.serviceType, Status: b.status, Fare: b.fare, Date: new Date(b.createdAt).toLocaleDateString('en-IN'), Patient: b.userId?.name || 'N/A' })), `ad-traffic-analytics-${Date.now()}.csv`)
   }
-
   const handleDownloadAdAnalyticsPDF = () => {
-    downloadPDF('CareBridge Ad Traffic Analytics', [
-      `Period: Last ${period}`,
-      `Total from Ads: ${fromAds.length}`,
-      `Completed: ${fromAds.filter(b => b.status === 'completed').length}`,
-      `Revenue: Rs. ${fromAds.filter(b => b.status === 'completed').reduce((s, b) => s + b.fare, 0).toLocaleString()}`,
-      '',
-      ...fromAds.map((b, i) => `${i+1}. #${b._id.slice(-8).toUpperCase()} | ${b.status} | Rs.${b.fare} | ${new Date(b.createdAt).toLocaleDateString('en-IN')}`),
-    ])
+    downloadPDF('CareBridge Ad Traffic Analytics', [`Period: Last ${period}`, `Total from Ads: ${fromAds.length}`, `Completed: ${fromAds.filter(b => b.status === 'completed').length}`, `Revenue: Rs. ${fromAds.filter(b => b.status === 'completed').reduce((s, b) => s + b.fare, 0).toLocaleString()}`])
   }
-
   const handleDownloadAssistAnalyticsCSV = () => {
-    const data = fromAsst.map(b => ({
-      BookingID: b._id.slice(-8).toUpperCase(),
-      Service: b.serviceType, Status: b.status,
-      Fare: b.fare, Date: new Date(b.createdAt).toLocaleDateString('en-IN'),
-      Patient: b.userId?.name || 'N/A',
-    }))
-    downloadCSV(data, `assistance-analytics-${Date.now()}.csv`)
+    downloadCSV(fromAsst.map(b => ({ BookingID: b._id.slice(-8).toUpperCase(), Service: b.serviceType, Status: b.status, Fare: b.fare, Date: new Date(b.createdAt).toLocaleDateString('en-IN'), Patient: b.userId?.name || 'N/A' })), `assistance-analytics-${Date.now()}.csv`)
   }
-
   const handleDownloadAssistAnalyticsPDF = () => {
-    downloadPDF('CareBridge Assistance Traffic Analytics', [
-      `Period: Last ${period}`,
-      `Total via Assistance: ${fromAsst.length}`,
-      `Completed: ${fromAsst.filter(b => b.status === 'completed').length}`,
-      `Revenue: Rs. ${fromAsst.filter(b => b.status === 'completed').reduce((s, b) => s + b.fare, 0).toLocaleString()}`,
-      '',
-      ...fromAsst.map((b, i) => `${i+1}. #${b._id.slice(-8).toUpperCase()} | ${b.serviceType} | ${b.status} | Rs.${b.fare} | ${new Date(b.createdAt).toLocaleDateString('en-IN')}`),
-    ])
+    downloadPDF('CareBridge Assistance Traffic Analytics', [`Period: Last ${period}`, `Total via Assistance: ${fromAsst.length}`, `Completed: ${fromAsst.filter(b => b.status === 'completed').length}`])
   }
-
-  const StatCard = ({ label, value, sub, color, bg }: { label: string; value: string | number; sub: string; color: string; bg: string }) => (
-    <div style={{ background: '#fff', borderRadius: 14, padding: 18, border: '1px solid #E2E8F0' }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>{label}</div>
-      <div style={{ fontSize: 28, fontWeight: 900, color: '#0F172A', letterSpacing: '-0.5px' }}>{value}</div>
-      <div style={{ fontSize: 12, color, fontWeight: 600, marginTop: 4, background: bg, display: 'inline-block', padding: '2px 8px', borderRadius: 20 }}>{sub}</div>
-    </div>
-  )
 
   return (
     <AuthGuard>
       <div style={{ display: 'flex', minHeight: '100vh', background: '#F8FAFC' }}>
         <Sidebar />
-        <div style={{ marginLeft: 220, flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ marginLeft: 220, flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           <TopBar
             title="Analytics"
             subtitle="Track traffic from CareBridge ads and assistance"
@@ -149,7 +208,6 @@ export default function AnalyticsPage() {
           />
 
           <div style={{ flex: 1, padding: 24, overflowY: 'auto' }}>
-
             {loading ? (
               <div style={{ textAlign: 'center', padding: 60, color: '#94A3B8' }}>Loading analytics...</div>
             ) : (
@@ -162,6 +220,32 @@ export default function AnalyticsPage() {
                   <StatCard label="Avg Fare"       value={`Rs.${filtered.length ? Math.round(filtered.reduce((s,b)=>s+b.fare,0)/filtered.length) : 0}`} sub="per booking" color="#D97706" bg="#FEF3C7" />
                 </div>
 
+                {/* ── NEW: Visual graphs row ── */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+
+                  {/* Booking trend line chart */}
+                  <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E2E8F0', padding: 20 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#0F172A', marginBottom: 4 }}>7-Day Booking Trend</div>
+                    <div style={{ fontSize: 12, color: '#64748B', marginBottom: 16 }}>Daily patient visits this week</div>
+                    <LineChart data={weekData} color="#0D9488" height={80} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+                      {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d, i) => (
+                        <span key={d} style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600 }}>{d}</span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Status donut chart */}
+                  <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E2E8F0', padding: 20 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#0F172A', marginBottom: 4 }}>Booking Status</div>
+                    <div style={{ fontSize: 12, color: '#64748B', marginBottom: 16 }}>Distribution by status</div>
+                    {statusSegments.length > 0
+                      ? <DonutChart segments={statusSegments} size={120} />
+                      : <div style={{ textAlign: 'center', padding: 20, color: '#94A3B8', fontSize: 13 }}>No data for period</div>
+                    }
+                  </div>
+                </div>
+
                 {/* ANALYTICS 1: Traffic from Ads */}
                 <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E2E8F0', marginBottom: 20, overflow: 'hidden' }}>
                   <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -170,14 +254,8 @@ export default function AnalyticsPage() {
                       <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>Patients who came after seeing your CareBridge advertisement</div>
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <button onClick={handleDownloadAdAnalyticsCSV}
-                        style={{ padding: '7px 14px', background: '#F1F5F9', color: '#475569', border: '1px solid #E2E8F0', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
-                        CSV
-                      </button>
-                      <button onClick={handleDownloadAdAnalyticsPDF}
-                        style={{ padding: '7px 14px', background: '#0D9488', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
-                        PDF
-                      </button>
+                      <button onClick={handleDownloadAdAnalyticsCSV} style={{ padding: '7px 14px', background: '#F1F5F9', color: '#475569', border: '1px solid #E2E8F0', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>CSV</button>
+                      <button onClick={handleDownloadAdAnalyticsPDF} style={{ padding: '7px 14px', background: '#0D9488', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>PDF</button>
                     </div>
                   </div>
                   <div style={{ padding: 20 }}>
@@ -195,14 +273,16 @@ export default function AnalyticsPage() {
                         <div style={{ fontSize: 12, color: '#64748B', marginTop: 4 }}>Revenue</div>
                       </div>
                     </div>
-                    {fromAds.length === 0 ? (
-                      <div style={{ textAlign: 'center', padding: '20px 0', color: '#94A3B8', fontSize: 13 }}>
-                        No ad traffic data yet. Post an ad to start tracking.
+
+                    {/* Ad traffic mini bar chart */}
+                    {fromAds.length > 0 && (
+                      <div style={{ background: '#F8FAFC', borderRadius: 12, padding: 16, border: '1px solid #E2E8F0' }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 12 }}>Ad Traffic Trend</div>
+                        <LineChart data={weekData} color="#7C3AED" height={60} />
                       </div>
-                    ) : (
-                      <div style={{ fontSize: 13, color: '#64748B' }}>
-                        {fromAds.length} patients discovered your hospital through CareBridge ads in the selected period.
-                      </div>
+                    )}
+                    {fromAds.length === 0 && (
+                      <div style={{ textAlign: 'center', padding: '20px 0', color: '#94A3B8', fontSize: 13 }}>No ad traffic data yet. Post an ad to start tracking.</div>
                     )}
                   </div>
                 </div>
@@ -212,17 +292,11 @@ export default function AnalyticsPage() {
                   <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div>
                       <div style={{ fontSize: 15, fontWeight: 800, color: '#0F172A' }}>Traffic from Assistance Services</div>
-                      <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>Patients who came to your hospital via CareBridge OPD assistants</div>
+                      <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>Patients via OPD assistants and ambulance</div>
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <button onClick={handleDownloadAssistAnalyticsCSV}
-                        style={{ padding: '7px 14px', background: '#F1F5F9', color: '#475569', border: '1px solid #E2E8F0', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
-                        CSV
-                      </button>
-                      <button onClick={handleDownloadAssistAnalyticsPDF}
-                        style={{ padding: '7px 14px', background: '#0D9488', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
-                        PDF
-                      </button>
+                      <button onClick={handleDownloadAssistAnalyticsCSV} style={{ padding: '7px 14px', background: '#F1F5F9', color: '#475569', border: '1px solid #E2E8F0', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>CSV</button>
+                      <button onClick={handleDownloadAssistAnalyticsPDF} style={{ padding: '7px 14px', background: '#0D9488', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>PDF</button>
                     </div>
                   </div>
                   <div style={{ padding: 20 }}>
@@ -256,10 +330,18 @@ export default function AnalyticsPage() {
                         </div>
                       ))}
                     </div>
+
+                    {/* Service donut */}
+                    {totalSvc > 0 && svcBreakdown.some(s => s.count > 0) && (
+                      <div style={{ background: '#F8FAFC', borderRadius: 12, padding: 16, border: '1px solid #E2E8F0' }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 12 }}>Service Mix</div>
+                        <DonutChart segments={svcBreakdown.filter(s => s.count > 0).map(s => ({ label: s.label, value: s.count, color: s.color }))} size={100} />
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Monthly trend */}
+                {/* Monthly trend bar chart */}
                 <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E2E8F0', overflow: 'hidden' }}>
                   <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2E8F0' }}>
                     <div style={{ fontSize: 15, fontWeight: 800, color: '#0F172A' }}>Monthly Patient Trend</div>
@@ -268,15 +350,23 @@ export default function AnalyticsPage() {
                     {monthData.length === 0 ? (
                       <div style={{ textAlign: 'center', padding: '20px 0', color: '#94A3B8', fontSize: 13 }}>No data for selected period</div>
                     ) : (
-                      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, height: 140 }}>
-                        {monthData.map(([month, count]) => (
-                          <div key={month} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: '#0D9488' }}>{count}</div>
-                            <div style={{ width: '100%', background: '#0D9488', borderRadius: '4px 4px 0 0', height: `${(count/maxMonth)*100}px`, minHeight: 4, transition: 'height 0.5s ease' }} />
-                            <div style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600 }}>{month}</div>
-                          </div>
-                        ))}
-                      </div>
+                      <>
+                        {/* Bar chart */}
+                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, height: 140, marginBottom: 16 }}>
+                          {monthData.map(([month, count]) => (
+                            <div key={month} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: '#0D9488' }}>{count}</div>
+                              <div style={{ width: '100%', background: 'linear-gradient(to top,#0D9488,#34d399)', borderRadius: '4px 4px 0 0', height: `${(count/maxMonth)*100}px`, minHeight: 4, transition: 'height 0.5s ease' }} />
+                              <div style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600, textAlign: 'center' }}>{month}</div>
+                            </div>
+                          ))}
+                        </div>
+                        {/* Line chart overlay */}
+                        <div style={{ border: '1px solid #E2E8F0', borderRadius: 12, padding: 16, background: '#F8FAFC' }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 8 }}>Trend Line</div>
+                          <LineChart data={monthData.map(([,v]) => v)} color="#0D9488" height={60} />
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
