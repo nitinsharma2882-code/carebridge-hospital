@@ -1,36 +1,48 @@
 'use client';
 
-// components/AuthGuard.tsx — EXTENDED VERSION
-// Drop-in replacement for your existing AuthGuard.
-// New prop `requiredRole` restricts access to specific roles.
-// If omitted, it behaves exactly like the old AuthGuard (any logged-in user passes).
-
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { isLoggedIn, getRole, getDashboardPath, UserRole } from '@/lib/auth';
+import { UserRole } from '@/lib/auth';
 
 interface AuthGuardProps {
   children: React.ReactNode;
-  requiredRole?: UserRole; // new optional prop
+  requiredRole?: UserRole;
 }
 
 export default function AuthGuard({ children, requiredRole }: AuthGuardProps) {
   const router = useRouter();
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!isLoggedIn()) {
+    const token = localStorage.getItem('cb_hospital_token');
+
+    if (!token) {
       router.replace('/select-role');
       return;
     }
 
-    if (requiredRole && getRole() !== requiredRole) {
-      // Logged in but wrong role — redirect to their own dashboard
-      router.replace(getDashboardPath());
+    if (requiredRole) {
+      const role = (localStorage.getItem('cb_selected_role') as UserRole) ?? 'hospital';
+      if (role !== requiredRole) {
+        const redirectMap: Record<string, string> = {
+          hospital:       '/dashboard',
+          corporate:      '/corporate/dashboard',
+          clinic:         '/clinic/dashboard',
+          pharmaceutical: '/pharmaceutical/dashboard',
+        };
+        router.replace(redirectMap[role] ?? '/select-role');
+        return;
+      }
     }
+
+    setReady(true);
   }, [router, requiredRole]);
 
-  if (!isLoggedIn()) return null;
-  if (requiredRole && getRole() !== requiredRole) return null;
+  if (!ready) return (
+    <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+      <div className="text-gray-500 text-sm">Loading...</div>
+    </div>
+  );
 
   return <>{children}</>;
 }

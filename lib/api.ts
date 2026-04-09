@@ -16,13 +16,15 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Auto logout on 401
+// Auto logout on 401 — only for non-login requests
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error?.response?.status === 401) {
+    const isLoginRequest = error?.config?.url?.includes('/login')
+    if (error?.response?.status === 401 && !isLoginRequest) {
       localStorage.removeItem('cb_hospital_token')
       localStorage.removeItem('cb_hospital')
+      localStorage.removeItem('cb_selected_role')
       window.location.href = '/select-role'
     }
     return Promise.reject(error)
