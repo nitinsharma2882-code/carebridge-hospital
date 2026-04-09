@@ -7,7 +7,6 @@ const api = axios.create({
   baseURL: BASE_URL,
 })
 
-// Attach token to every request automatically
 api.interceptors.request.use((config) => {
   const token = getToken()
   if (token) {
@@ -16,7 +15,6 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Auto logout on 401 — skip login requests
 api.interceptors.response.use(
   (response) => response,
   (error) => {
