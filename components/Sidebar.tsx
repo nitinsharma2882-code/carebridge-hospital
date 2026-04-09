@@ -24,7 +24,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 min-h-screen bg-gray-900 border-r border-gray-800 flex flex-col">
+    <aside className="w-64 min-h-screen bg-gray-900 border-r border-gray-800 flex flex-col fixed left-0 top-0 z-50 overflow-y-auto">
       {/* Logo + Role Badge */}
       <div className="p-6 border-b border-gray-800">
         <div className="flex items-center gap-3 mb-3">
