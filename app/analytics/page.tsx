@@ -191,7 +191,7 @@ export default function AnalyticsPage() {
     <AuthGuard>
       <div style={{ display: 'flex', minHeight: '100vh', background: '#F8FAFC' }}>
         <Sidebar />
-        <div style={{ marginLeft: 220, flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <div style={{ marginLeft: 256, flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           <TopBar
             title="Analytics"
             subtitle="Track traffic from CareBridge ads and assistance"

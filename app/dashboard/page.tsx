@@ -33,7 +33,7 @@ export default function DashboardPage() {
     <AuthGuard>
       <div style={{ display: 'flex', minHeight: '100vh', background: '#F8FAFC' }}>
         <Sidebar />
-        <div style={{ marginLeft: 220, flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ marginLeft: 256, flex: 1, display: 'flex', flexDirection: 'column' }}>
           <TopBar
             title="Dashboard"
             actions={

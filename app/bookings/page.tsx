@@ -133,7 +133,7 @@ export default function BookingsPage() {
     <AuthGuard>
       <div style={{ display: 'flex', minHeight: '100vh', background: '#F8FAFC' }}>
         <Sidebar />
-        <div style={{ marginLeft: 220, flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <div style={{ marginLeft: 256, flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           <TopBar
             title="Bookings"
             subtitle={`${bookings.length} total bookings via CareBridge`}

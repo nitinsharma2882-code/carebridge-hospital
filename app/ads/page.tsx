@@ -96,7 +96,7 @@ export default function AdsPage() {
     <AuthGuard>
       <div style={{ display: 'flex', minHeight: '100vh', background: '#F8FAFC' }}>
         <Sidebar />
-        <div style={{ marginLeft: 220, flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ marginLeft: 256, flex: 1, display: 'flex', flexDirection: 'column' }}>
           <TopBar title="Post an Ad" subtitle="Reach CareBridge users across India" />
 
           <div style={{ flex: 1, padding: 24, overflowY: 'auto' }}>
