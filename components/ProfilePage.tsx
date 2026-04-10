@@ -68,7 +68,7 @@ export default function ProfilePage({ role, apiBase, extraFields = [] }: Props) 
     <AuthGuard requiredRole={role}>
       <div className="flex min-h-screen bg-gray-950">
         <Sidebar />
-        <main className="flex-1 flex flex-col">
+        <main className="flex-1 flex flex-col ml-64 min-w-0">
           <TopBar title="Profile & Settings" subtitle="Manage your organisation's information" />
           <div className="p-6 max-w-2xl">
             <div className="bg-gray-900 rounded-2xl border border-gray-800 p-6 space-y-4">

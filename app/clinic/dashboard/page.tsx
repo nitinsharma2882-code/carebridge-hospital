@@ -33,13 +33,15 @@ export default function ClinicDashboard() {
 
   return (
     <AuthGuard requiredRole="clinic">
+      {/* FIX: added ml-64 to offset fixed sidebar, min-w-0 to prevent overflow stretch */}
       <div className="flex min-h-screen bg-gray-950">
         <Sidebar />
-        <main className="flex-1 flex flex-col">
+        <main className="flex-1 flex flex-col min-w-0 ml-64">
           <TopBar title="Clinic Dashboard" subtitle="Overview of your clinic activity on CareBridge" />
-          <div className="p-6 space-y-6">
+          <div className="p-6 space-y-6 max-w-7xl w-full">
 
-            <div className="grid grid-cols-4 gap-4">
+            {/* Stat Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {cards.map(card => (
                 <div key={card.label} className="bg-gray-900 rounded-2xl p-5 border border-gray-800">
                   <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${card.color} flex items-center justify-center text-xl mb-3`}>
@@ -51,12 +53,11 @@ export default function ClinicDashboard() {
               ))}
             </div>
 
-            {/* Quick Actions */}
-            <div className="grid grid-cols-3 gap-4">
+            {/* Quick Actions — Patients & Bookings removed */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
-                { label: 'Patient Records', href: '/clinic/patients', icon: '🧑‍⚕️', desc: 'View and manage patient records' },
-                { label: 'View Bookings',   href: '/clinic/bookings', icon: '📋',   desc: 'Track appointment status' },
-                { label: 'Post an Ad',      href: '/clinic/ads',      icon: '📢',   desc: 'Promote your clinic to CareBridge users' },
+                { label: 'Post an Ad',  href: '/clinic/ads',       icon: '📢', desc: 'Promote your clinic to CareBridge users' },
+                { label: 'Analytics',   href: '/clinic/analytics', icon: '📈', desc: 'Track patient trends and ad performance' },
               ].map(action => (
                 <a key={action.label} href={action.href} className="bg-gray-900 border border-gray-800 hover:border-emerald-500/50 rounded-2xl p-5 transition-all group">
                   <div className="text-2xl mb-3">{action.icon}</div>
@@ -69,7 +70,7 @@ export default function ClinicDashboard() {
             {/* How CareBridge Works for Clinics */}
             <div className="bg-gray-900 rounded-2xl border border-gray-800 p-6">
               <h3 className="text-white font-semibold mb-4">How CareBridge Works for Clinics</h3>
-              <div className="grid grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {[
                   { step: '1', title: 'Patients Book via App', desc: 'CareBridge users book appointments at your clinic through the consumer app.' },
                   { step: '2', title: 'You Get Notified',      desc: 'Real-time booking notifications sent to your panel dashboard.' },

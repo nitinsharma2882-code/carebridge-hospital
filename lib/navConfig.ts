@@ -1,4 +1,4 @@
-// lib/navConfig.ts — Updated hospital nav with Support
+// lib/navConfig.ts — Patients & Bookings removed from clinic nav
 import { UserRole } from './auth';
 
 export interface NavItem {
@@ -29,10 +29,9 @@ const corporateNav: NavItem[] = [
   { label: 'Profile',         href: '/corporate/profile',         icon: '👤' },
 ];
 
+// ── Clinic: Patients & Bookings removed ──────────────────────────────────────
 const clinicNav: NavItem[] = [
   { label: 'Dashboard',  href: '/clinic/dashboard',  icon: '📊' },
-  { label: 'Patients',   href: '/clinic/patients',   icon: '🧑‍⚕️' },
-  { label: 'Bookings',   href: '/clinic/bookings',   icon: '📋' },
   { label: 'Analytics',  href: '/clinic/analytics',  icon: '📈' },
   { label: 'Post an Ad', href: '/clinic/ads',        icon: '📢' },
   { label: 'Support',    href: '/clinic/support',    icon: '🎧' },
