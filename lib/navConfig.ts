@@ -29,9 +29,10 @@ const corporateNav: NavItem[] = [
   { label: 'Profile',         href: '/corporate/profile',         icon: '👤' },
 ];
 
-// ── Clinic: Patients & Bookings removed ──────────────────────────────────────
+// ── Clinic: Patients removed, Bookings kept ──────────────────────────────────
 const clinicNav: NavItem[] = [
   { label: 'Dashboard',  href: '/clinic/dashboard',  icon: '📊' },
+  { label: 'Bookings',   href: '/clinic/bookings',   icon: '📋' },
   { label: 'Analytics',  href: '/clinic/analytics',  icon: '📈' },
   { label: 'Post an Ad', href: '/clinic/ads',        icon: '📢' },
   { label: 'Support',    href: '/clinic/support',    icon: '🎧' },
