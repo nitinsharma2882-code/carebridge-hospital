@@ -1,4 +1,4 @@
-// lib/navConfig.ts — Patients & Bookings removed from clinic nav
+// lib/navConfig.ts — Promotions removed from pharma nav
 import { UserRole } from './auth';
 
 export interface NavItem {
@@ -29,7 +29,7 @@ const corporateNav: NavItem[] = [
   { label: 'Profile',         href: '/corporate/profile',         icon: '👤' },
 ];
 
-// ── Clinic: Patients removed, Bookings kept ──────────────────────────────────
+// ── Clinic: Patients removed ─────────────────────────────────────────────────
 const clinicNav: NavItem[] = [
   { label: 'Dashboard',  href: '/clinic/dashboard',  icon: '📊' },
   { label: 'Bookings',   href: '/clinic/bookings',   icon: '📋' },
@@ -39,14 +39,14 @@ const clinicNav: NavItem[] = [
   { label: 'Profile',    href: '/clinic/profile',    icon: '👤' },
 ];
 
+// ── Pharma: Promotions removed ───────────────────────────────────────────────
 const pharmaNav: NavItem[] = [
-  { label: 'Dashboard',    href: '/pharmaceutical/dashboard',   icon: '📊' },
-  { label: 'Promotions',   href: '/pharmaceutical/promotions',  icon: '🎯' },
-  { label: 'Orders/Leads', href: '/pharmaceutical/orders',      icon: '📦' },
-  { label: 'Analytics',    href: '/pharmaceutical/analytics',   icon: '📈' },
-  { label: 'Post an Ad',   href: '/pharmaceutical/ads',         icon: '📢' },
-  { label: 'Support',      href: '/pharmaceutical/support',     icon: '🎧' },
-  { label: 'Profile',      href: '/pharmaceutical/profile',     icon: '👤' },
+  { label: 'Dashboard',    href: '/pharmaceutical/dashboard', icon: '📊' },
+  { label: 'Orders/Leads', href: '/pharmaceutical/orders',   icon: '📦' },
+  { label: 'Analytics',    href: '/pharmaceutical/analytics', icon: '📈' },
+  { label: 'Post an Ad',   href: '/pharmaceutical/ads',      icon: '📢' },
+  { label: 'Support',      href: '/pharmaceutical/support',  icon: '🎧' },
+  { label: 'Profile',      href: '/pharmaceutical/profile',  icon: '👤' },
 ];
 
 export const navByRole: Record<UserRole, NavItem[]> = {
@@ -57,7 +57,7 @@ export const navByRole: Record<UserRole, NavItem[]> = {
 };
 
 export const roleMeta: Record<UserRole, { label: string; color: string }> = {
-  hospital:       { label: 'Hospital',       color: 'from-blue-500 to-blue-700' },
+  hospital:       { label: 'Hospital',       color: 'from-blue-500 to-blue-700'   },
   corporate:      { label: 'Corporate',      color: 'from-violet-500 to-violet-700' },
   clinic:         { label: 'Clinic',         color: 'from-emerald-500 to-emerald-700' },
   pharmaceutical: { label: 'Pharmaceutical', color: 'from-orange-500 to-orange-700' },
