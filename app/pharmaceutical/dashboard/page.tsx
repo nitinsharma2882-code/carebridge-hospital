@@ -53,7 +53,6 @@ export default function PharmaceuticalDashboard() {
 
             <div className="grid grid-cols-3 gap-4">
               {[
-                { label: 'Create Promotion', href: '/pharmaceutical/promotions', icon: '🎯', desc: 'Launch a new product promotion campaign' },
                 { label: 'View Orders',      href: '/pharmaceutical/orders',     icon: '📦', desc: 'Track leads and orders from CareBridge' },
                 { label: 'Post an Ad',       href: '/pharmaceutical/ads',        icon: '📢', desc: 'Reach doctors and patients directly' },
               ].map(action => (
