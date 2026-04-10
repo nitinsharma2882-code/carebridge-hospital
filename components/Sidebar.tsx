@@ -1,22 +1,41 @@
 'use client';
 
-// components/Sidebar.tsx — UPDATED (role-aware, backward compatible)
-// Replaces your existing Sidebar.tsx.
-// Hospital users see exactly the same nav as before.
-// Other roles see their own nav from navConfig.ts.
+// components/Sidebar.tsx — FIXED (SSR-safe)
+// Uses useState + useEffect to read localStorage only on client,
+// preventing "Application error" crash after login.
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { getHospital, clearAuth, getRole } from '@/lib/auth';
-import { navByRole, roleMeta } from '@/lib/navConfig';
+import { useEffect, useState } from 'react';
+import { clearAuth, UserRole } from '@/lib/auth';
+import { navByRole, roleMeta, NavItem } from '@/lib/navConfig';
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const role = getRole();
-  const hospital = getHospital();
-  const nav = navByRole[role];
-  const meta = roleMeta[role];
+
+  // Don't read localStorage until client mounts
+  const [role,  setRole]  = useState<UserRole>('hospital');
+  const [name,  setName]  = useState('User');
+  const [email, setEmail] = useState('');
+  const [nav,   setNav]   = useState<NavItem[]>([]);
+  const [meta,  setMeta]  = useState(roleMeta['hospital']);
+
+  useEffect(() => {
+    // Safe to read localStorage here — runs only on client
+    const storedRole = (localStorage.getItem('cb_selected_role') as UserRole) ?? 'hospital';
+    let userData = { name: 'User', email: '' };
+    try {
+      const raw = localStorage.getItem('cb_hospital');
+      if (raw) userData = JSON.parse(raw);
+    } catch {}
+
+    setRole(storedRole);
+    setName((userData as Record<string,string>).name ?? 'User');
+    setEmail((userData as Record<string,string>).email ?? '');
+    setNav(navByRole[storedRole] ?? navByRole['hospital']);
+    setMeta(roleMeta[storedRole] ?? roleMeta['hospital']);
+  }, []);
 
   const handleLogout = () => {
     clearAuth();
@@ -42,15 +61,11 @@ export default function Sidebar() {
       <div className="px-4 py-3 border-b border-gray-800">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white text-sm font-semibold">
-            {(hospital?.name as string)?.[0] ?? 'U'}
+            {name?.[0] ?? 'U'}
           </div>
           <div className="min-w-0">
-            <div className="text-white text-sm font-medium truncate">
-              {(hospital?.name as string) ?? 'User'}
-            </div>
-            <div className="text-gray-400 text-xs truncate">
-              {(hospital?.email as string) ?? ''}
-            </div>
+            <div className="text-white text-sm font-medium truncate">{name}</div>
+            <div className="text-gray-400 text-xs truncate">{email}</div>
           </div>
         </div>
       </div>
