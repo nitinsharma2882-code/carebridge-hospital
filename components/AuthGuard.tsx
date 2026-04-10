@@ -1,8 +1,12 @@
 'use client';
 
+// components/AuthGuard.tsx — FIXED
+// Prevents "Application error" crash caused by reading localStorage before
+// the component mounts on the client (SSR has no localStorage).
+
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { UserRole } from '@/lib/auth';
+import { isLoggedIn, getRole, getDashboardPath, UserRole } from '@/lib/auth';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -11,38 +15,28 @@ interface AuthGuardProps {
 
 export default function AuthGuard({ children, requiredRole }: AuthGuardProps) {
   const router = useRouter();
+  // Key fix: don't render anything until we know we're on the client
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('cb_hospital_token');
-
-    if (!token) {
+    // Only runs on client — localStorage is safe here
+    if (!isLoggedIn()) {
       router.replace('/select-role');
       return;
     }
 
-    if (requiredRole) {
-      const role = (localStorage.getItem('cb_selected_role') as UserRole) ?? 'hospital';
-      if (role !== requiredRole) {
-        const redirectMap: Record<string, string> = {
-          hospital:       '/dashboard',
-          corporate:      '/corporate/dashboard',
-          clinic:         '/clinic/dashboard',
-          pharmaceutical: '/pharmaceutical/dashboard',
-        };
-        router.replace(redirectMap[role] ?? '/select-role');
-        return;
-      }
+    if (requiredRole && getRole() !== requiredRole) {
+      router.replace(getDashboardPath());
+      return;
     }
 
+    // All checks passed — safe to render children
     setReady(true);
   }, [router, requiredRole]);
 
-  if (!ready) return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-      <div className="text-gray-500 text-sm">Loading...</div>
-    </div>
-  );
+  // Don't render anything until client-side checks are done
+  // This prevents the flash and the SSR crash
+  if (!ready) return null;
 
   return <>{children}</>;
 }
